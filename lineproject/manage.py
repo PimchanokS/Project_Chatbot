@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import (LineBotApi, WebhookHandler)
 from linebot.exceptions import (InvalidSignatureError)
-from linebot.models import (MessageEvent, TextMessage,flex_message, TextSendMessage,QuickReply,TemplateSendMessage,FlexSendMessage,PostbackAction,QuickReplyButton,MessageAction,LocationMessage,LocationAction,ConfirmTemplate)
+from linebot.models import (MessageEvent,ImageSendMessage, TextMessage,ImageMessage, TextSendMessage,QuickReply,TemplateSendMessage,FlexSendMessage,PostbackAction,QuickReplyButton,MessageAction,LocationMessage,LocationAction,ConfirmTemplate)
 import pymongo
 import uuid
 import random
@@ -15,7 +15,6 @@ handler = WebhookHandler('f48e5452ada9f30180000e6cf4a6ce42') #channel secret
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["Chatbot"]
 mycol = mydb["Repair_List"]
-
 
 app = Flask(__name__)
 
@@ -37,95 +36,106 @@ def webhook():
         abort(400)
     return 'Connection'
 
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=(TextMessage,LocationMessage,ImageMessage))
 def handle_message(event):
-    global repiar_type,repiar,detail,address,phonenumber
+    global repiar_type,repiar,detail,address,phonenumber,location
     repair_list = ['น้ำประปาไม่ไหล','มีกลิ่น,ขุ่น,มิเตอร์','ระบบไฟฟ้า','ระบบปรับอากาศ','โยธาสถาปัตย์','ประปาและสุขาภิบาล','ตัดหญ้า','ตัดแต่งกิ่ง','กำจัดแมลง']
     fallback = ['ขออภัยค่ะ ฉันไม่เข้าใจ','ขอโทษค่ะ ฉันไม่เข้าใจ','กรุณาตรวจสอบข้อความก่อนส่งค่ะ','คุณต้องการใช้บริการอะไรคะ','หากต้องการใช้บริการกรุณากดเมนูดูได้เลยค่ะ']
-    if  'สวัสดี' in event.message.text : 
-        line_bot_api.reply_message(event,"สวัสดีค่ะ เราคือแชทบอทแจ้งซ่อม หากต้องการใช้บริการสามารถกดที่ปุ่มเมนูเพื่อเลือกบริการที่ต้องการค่ะ")
-    #แจ้งซ่อม
-    elif event.message.text == 'แจ้งซ่อม' : 
-        quickreply_repairtype(event,"เลือกประเภทงานบริการ")
-    elif event.message.text == 'แจ้งซ่อมระบบประปา' :
-        repiar_type = 'แจ้งซ่อมระบบประปา'
-        plumbing_system(event,"รายละเอียดแจ้งซ่อม")
-    elif event.message.text == 'แจ้งซ่อมไฟฟ้า' :
-        repiar_type = 'แจ้งซ่อมไฟฟ้า' 
-        electrical_system(event,"รายละเอียดแจ้งซ่อม")
-    elif event.message.text == 'งานซ่อมบำรุงรักษา' : 
-        repiar_type = 'งานซ่อมบำรุงรักษา'
-        maintenance(event,"รายละเอียดแจ้งซ่อม")
-    elif event.message.text == 'แจ้งงานภูมิทัศน์' : 
-        repiar_type = 'แจ้งงานภูมิทัศน์'
-        landscape(event,"รายละเอียดแจ้งซ่อม")
-    #เช็ครายละเอียดเพิ่มเติม
-    elif (event.message.text[0] == '-' and event.message.text[1] == 'd') or (event.message.text[0] == '-' and event.message.text[1] == '*') :
-        if event.message.text[1] == '*':
-            detail='-'
-        else:detail = event.message.text[3:]
-        confirmdata(event,"หากตรวจสอบข้อมูลเรียบร้อยแล้ว\nกรุณากดยืนยันค่ะ")
-    #ช่องทางการติดต่อ
-    elif event.message.text == 'ช่องทางการติดต่อ' : 
-        line_bot_api.reply_message(event,"สามารถติดต่อได้ตามช่องทางด้านล่างเลยค่ะ")
-    #ปัญหาที่จะแจ้งซ่อม
-    elif event.message.text in repair_list:
-        repiar=event.message.text
-        address=quickreply_asklocation(event,"ขอทราบที่อยู่ค่ะ")
-    #เช็คเบอร์โทรศัพท์
-    elif event.message.text[0] == '-' and event.message.text[1] == 'p':
-        if event.message.text[3:].isdigit() and len(event.message.text[3:])==10:
-            phonenumber = event.message.text[3:]
-            if phonenumber[0] == "0" and (phonenumber[1]=="6" or phonenumber[1]=="9" or phonenumber[1]=="8"):
+    if isinstance(event.message, TextMessage):
+        if  'สวัสดี' in event.message.text : 
+            line_bot_api.reply_message(event,"สวัสดีค่ะ เราคือแชทบอทแจ้งซ่อม หากต้องการใช้บริการสามารถกดที่ปุ่มเมนูเพื่อเลือกบริการที่ต้องการค่ะ")
+        #แจ้งซ่อม
+        elif event.message.text == 'แจ้งซ่อม' : 
+            quickreply_repairtype(event,"เลือกประเภทงานบริการ")
+        elif event.message.text == 'แจ้งซ่อมระบบประปา' :
+            repiar_type = 'แจ้งซ่อมระบบประปา'
+            plumbing_system(event,"รายละเอียดแจ้งซ่อม")
+        elif event.message.text == 'แจ้งซ่อมไฟฟ้า' :
+            repiar_type = 'แจ้งซ่อมไฟฟ้า' 
+            electrical_system(event,"รายละเอียดแจ้งซ่อม")
+        elif event.message.text == 'งานซ่อมบำรุงรักษา' : 
+            repiar_type = 'งานซ่อมบำรุงรักษา'
+            maintenance(event,"รายละเอียดแจ้งซ่อม")
+        elif event.message.text == 'แจ้งงานภูมิทัศน์' : 
+            repiar_type = 'แจ้งงานภูมิทัศน์'
+            landscape(event,"รายละเอียดแจ้งซ่อม")
+        #เช็ครายละเอียดเพิ่มเติม
+        elif (event.message.text[0] == '-' and event.message.text[1] == 'd') or (event.message.text[0] == '-' and event.message.text[1] == '*') :
+            if event.message.text[1] == '*':
+                detail='-'
+            else:detail = event.message.text[3:]
+            confirmdata(event,"หากตรวจสอบข้อมูลเรียบร้อยแล้ว\nกรุณากดยืนยันค่ะ")
+        #ช่องทางการติดต่อ
+        elif event.message.text == 'ช่องทางการติดต่อ' : 
+            line_bot_api.reply_message(event,"สามารถติดต่อได้ตามช่องทางด้านล่างเลยค่ะ")
+        #ปัญหาที่จะแจ้งซ่อม
+        elif event.message.text in repair_list:
+            repiar=event.message.text
+            address=quickreply_asklocation(event,"ขอทราบที่อยู่ค่ะ")
+        #เช็คเบอร์โทรศัพท์
+        elif event.message.text[0] == '-' and event.message.text[1] == 'p':
+            if event.message.text[3:].isdigit() and len(event.message.text[3:])==10:
                 phonenumber = event.message.text[3:]
-                sendMessage(event,"หากต้องการแจ้งหมายเหตุ\nพิมพ์-d(เว้นวรรค)ตามด้วยข้อความ\nหากไม่มีให้พิมพ์ \"-*\")")
-            else: sendMessage(event,"ตรวจวสอบเบอร์โทรศัพท์อีกครั้งค่ะ")
-        else: sendMessage(event,"กรุณาแจ้งเบอร์โทรศัพท์ที่ถูกต้องค่ะ")
-    elif event.message.text == 'ตรวจสอบสถานะ':
-        checkstatus(event,"ต้องการตรวจสอบแบบไหนดีคะ")
-    elif event.message.text == 'ใส่ไอดีแจ้งซ่อม':
-        sendMessage(event,"กรุณาใส่ไอดีแจ้งซ่อมค่ะ")
-    elif event.message.text[0] == 'S' and  event.message.text[1] == 'U' and  event.message.text[2] == 'T':
-        yourid=event.message.text
-        if mycol.count_documents({"repair_id": yourid}) > 0:
-            for i in mycol.find({"repair_id": yourid}):
-                print(i)
-                yourstatus=i['status']
-                if yourstatus == 'เสร็จสิ้น':
-                    StatusSuccess(event,"สถานะการแจ้งซ่อม",yourid)
-                elif yourstatus == 'กำลังดำเนินการ':
-                    StatusInProgress(event,"สถานะการแจ้งซ่อม",yourid)
-                elif yourstatus == 'รอดำเนินการ':
-                    StatusPending(event,"สถานะการแจ้งซ่อม",yourid)
-                else: sendMessage(event,"ไอดีแจ้งซ่อมไม่ถูกต้องค่ะ")
-        else: sendMessage(event,"กรุณาตรวจสอบไอดีแจ้งซ่อมค่ะ")
-    elif event.message.text == '.ยืนยัน':  
-        detail_data(event,"ข้อมูลแจ้งซ่อม",repair_id,repiar_type,repiar,location,phonenumber,status,detail)
-        yes()
-        insertdb()
-    elif event.message.text == 'สถิติการแจ้งซ่อม':
-        pending = mycol.count_documents({"status": "รอดำเนินการ"})
-        in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
-        success = mycol.count_documents({"status": "เสร็จสิ้น"})
-        Showstatus(event,"สถิติการแจ้งซ่อม",pending,in_progress,success)
-    else: sendMessage(event,random.choice(fallback))    
-            
-@handler.add(MessageEvent, message=LocationMessage)
-def location_message(event):
-    global location
-    address=event.message.address #ที่อยู่ที่userแชร์มา
-    lst_location = ['Suranaree','Suranari','SUT']
-    for i in lst_location:
-        if i in address:
+                if phonenumber[0] == "0" and (phonenumber[1]=="6" or phonenumber[1]=="9" or phonenumber[1]=="8"):
+                    phonenumber = event.message.text[3:]
+                    sendMessage(event,"หากต้องการแจ้งหมายเหตุ\nพิมพ์-d(เว้นวรรค)ตามด้วยข้อความ\nหากไม่มีให้พิมพ์ \"-*\")")
+                else: sendMessage(event,"ตรวจวสอบเบอร์โทรศัพท์อีกครั้งค่ะ")
+            else: sendMessage(event,"กรุณาแจ้งเบอร์โทรศัพท์ที่ถูกต้องค่ะ")
+        elif event.message.text == 'ตรวจสอบสถานะ':
+            checkstatus(event,"ต้องการตรวจสอบแบบไหนดีคะ")
+        elif event.message.text == 'ใส่ไอดีแจ้งซ่อม':
+            sendMessage(event,"กรุณาใส่ไอดีแจ้งซ่อมค่ะ")
+        elif event.message.text[0] == 'S' and  event.message.text[1] == 'U' and  event.message.text[2] == 'T':
+            yourid=event.message.text
+            if mycol.count_documents({"repair_id": yourid}) > 0:
+                for i in mycol.find({"repair_id": yourid}):
+                    print(i)
+                    yourstatus=i['status']
+                    if yourstatus == 'เสร็จสิ้น':
+                        StatusSuccess(event,"สถานะการแจ้งซ่อม",yourid)
+                    elif yourstatus == 'กำลังดำเนินการ':
+                        StatusInProgress(event,"สถานะการแจ้งซ่อม",yourid)
+                    elif yourstatus == 'รอดำเนินการ':
+                        StatusPending(event,"สถานะการแจ้งซ่อม",yourid)
+                    else: sendMessage(event,"ไอดีแจ้งซ่อมไม่ถูกต้องค่ะ")
+            else: sendMessage(event,"กรุณาตรวจสอบไอดีแจ้งซ่อมค่ะ")
+        elif event.message.text == '.ยืนยัน':  
+            detail_data(event,"ข้อมูลแจ้งซ่อม",repair_id,repiar_type,repiar,location,phonenumber,status,detail)
+            yes()
+            insertdb()
+        elif event.message.text == 'สถิติการแจ้งซ่อม':
+            pending = mycol.count_documents({"status": "รอดำเนินการ"})
+            in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
+            success = mycol.count_documents({"status": "เสร็จสิ้น"})
+            Showstatus(event,"สถิติการแจ้งซ่อม",pending,in_progress,success) 
+    
+    elif isinstance(event.message, LocationMessage):
+        address=event.message.address #ที่อยู่ที่userแชร์มา
+        lst_location = ['Suranaree','Suranari','SUT']
+        c_location=0
+        for i in lst_location:
+            if i in address:
+                c_location+=1
+        if c_location>=1:
             location = address
             sendMessage(event,"รบกวนแจ้งเบอร์โทรศัพท์ค่ะ\nพิมพ์ -p(เว้นวรรค)ตามด้วยเบอร์\n(เช่น -p 0999999999)")
-        else: quickreply_asklocation(event,"กรุณากรอกที่อยู่ภายในมหาวิทยาลัยค่ะ")
+        elif i not in address : quickreply_asklocation(event,"กรุณากรอกที่อยู่ภายในมหาวิทยาลัยค่ะ")
+   
+    # elif isinstance(event.message, ImageMessage):
+    #     message_content = line_bot_api.get_message_content('<message_id>')
+    #     with open("Pictures", 'wb') as fd:
+    #         for chunk in message_content.iter_content():
+    #             fd.write(chunk)
+    else: sendMessage(event,random.choice(fallback))    
 
 def sendMessage(event,message):
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=message),
         print(message))
+
+# def sendImage(event):
+#     line_bot_api.
     
 def quickreply_repairtype(event,message):
     line_bot_api.reply_message(
