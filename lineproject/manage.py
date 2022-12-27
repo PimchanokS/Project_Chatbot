@@ -1,13 +1,18 @@
 from flask import Flask, request, abort
 from linebot import (LineBotApi, WebhookHandler)
 from linebot.exceptions import (InvalidSignatureError)
-from linebot.models import (MessageEvent,ImageSendMessage, TextMessage,ImageMessage, TextSendMessage,QuickReply,TemplateSendMessage,FlexSendMessage,PostbackAction,QuickReplyButton,MessageAction,LocationMessage,LocationAction,ConfirmTemplate)
+from linebot.models import (CameraAction,MessageEvent,ImageSendMessage,TextMessage,ImageMessage,CameraRollAction,TextSendMessage,QuickReply,TemplateSendMessage,FlexSendMessage,PostbackAction,QuickReplyButton,MessageAction,LocationMessage,LocationAction,ConfirmTemplate)
 import pymongo
 import uuid
 import random
 import datetime
+import tempfile
+import os
+import imgbbpy
+import folium
 now = datetime.datetime.now()
 current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+static_tmp_path = os.path.join(os.path.dirname(__file__),'static','tmp')
 #Line
 line_bot_api = LineBotApi('n6IFRxEkUC+Wy2rprCo+MXEOlipi8JPHrvcm7sdHjtYjIOs7a0nAG1s5LDpoh8pbhT1qVzVUD9nsc2J7fihZJuzL6PLcL/bnDjzhgDlmxgU5BNa1TFl+R/ZKFs26zfVzA67jirOtaMuZrZwziKo/SQdB04t89/1O/w1cDnyilFU=') #chnnel access token
 handler = WebhookHandler('f48e5452ada9f30180000e6cf4a6ce42') #channel secret
@@ -20,7 +25,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return 'Hello World!'
+    start_coords = (46.9540700, 142.7360300)
+    folium_map = folium.Map(location=start_coords, zoom_start=14)
+    return folium_map._repr_html_()
 
 @app.route('/webhook', methods=['GET','POST'])
 def webhook():
@@ -38,7 +45,16 @@ def webhook():
 
 @handler.add(MessageEvent, message=(TextMessage,LocationMessage,ImageMessage))
 def handle_message(event):
-    global repiar_type,repiar,detail,address,phonenumber,location
+    global repair_id
+    global repiar_type
+    global repiar
+    global detail
+    global latitude
+    global longitude
+    global phonenumber
+    global location
+    global status
+    global message_content
     repair_list = ['น้ำประปาไม่ไหล','มีกลิ่น,ขุ่น,มิเตอร์','ระบบไฟฟ้า','ระบบปรับอากาศ','โยธาสถาปัตย์','ประปาและสุขาภิบาล','ตัดหญ้า','ตัดแต่งกิ่ง','กำจัดแมลง']
     fallback = ['ขออภัยค่ะ ฉันไม่เข้าใจ','ขอโทษค่ะ ฉันไม่เข้าใจ','กรุณาตรวจสอบข้อความก่อนส่งค่ะ','คุณต้องการใช้บริการอะไรคะ','หากต้องการใช้บริการกรุณากดเมนูดูได้เลยค่ะ']
     if isinstance(event.message, TextMessage):
@@ -47,6 +63,7 @@ def handle_message(event):
         #แจ้งซ่อม
         elif event.message.text == 'แจ้งซ่อม' : 
             quickreply_repairtype(event,"เลือกประเภทงานบริการ")
+            
         elif event.message.text == 'แจ้งซ่อมระบบประปา' :
             repiar_type = 'แจ้งซ่อมระบบประปา'
             plumbing_system(event,"รายละเอียดแจ้งซ่อม")
@@ -71,7 +88,8 @@ def handle_message(event):
         #ปัญหาที่จะแจ้งซ่อม
         elif event.message.text in repair_list:
             repiar=event.message.text
-            address=quickreply_asklocation(event,"ขอทราบที่อยู่ค่ะ")
+            imageaction(event,"รูปภาพประกอบค่ะ")
+            
         #เช็คเบอร์โทรศัพท์
         elif event.message.text[0] == '-' and event.message.text[1] == 'p':
             if event.message.text[3:].isdigit() and len(event.message.text[3:])==10:
@@ -81,10 +99,12 @@ def handle_message(event):
                     sendMessage(event,"หากต้องการแจ้งหมายเหตุ\nพิมพ์-d(เว้นวรรค)ตามด้วยข้อความ\nหากไม่มีให้พิมพ์ \"-*\")")
                 else: sendMessage(event,"ตรวจวสอบเบอร์โทรศัพท์อีกครั้งค่ะ")
             else: sendMessage(event,"กรุณาแจ้งเบอร์โทรศัพท์ที่ถูกต้องค่ะ")
+        #ตรวจสอบสถานะ
         elif event.message.text == 'ตรวจสอบสถานะ':
             checkstatus(event,"ต้องการตรวจสอบแบบไหนดีคะ")
         elif event.message.text == 'ใส่ไอดีแจ้งซ่อม':
             sendMessage(event,"กรุณาใส่ไอดีแจ้งซ่อมค่ะ")
+        #เช็คไอดีแจ้งซ่อม
         elif event.message.text[0] == 'S' and  event.message.text[1] == 'U' and  event.message.text[2] == 'T':
             yourid=event.message.text
             if mycol.count_documents({"repair_id": yourid}) > 0:
@@ -99,16 +119,30 @@ def handle_message(event):
                         StatusPending(event,"สถานะการแจ้งซ่อม",yourid)
                     else: sendMessage(event,"ไอดีแจ้งซ่อมไม่ถูกต้องค่ะ")
             else: sendMessage(event,"กรุณาตรวจสอบไอดีแจ้งซ่อมค่ะ")
-        elif event.message.text == '.ยืนยัน':  
-            detail_data(event,"ข้อมูลแจ้งซ่อม",repair_id,repiar_type,repiar,location,phonenumber,status,detail)
-            yes()
-            insertdb()
+        #cf
+        elif event.message.text == '.ยืนยัน':
+            status = 'รอดำเนินการ'
+            repair_id = generate_id()
+            test_result = line_bot_api.test_webhook_endpoint()
+            timestamp = test_result.timestamp
+            insertdb(repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp,latitude,longitude)            
+            detail_data(event,"ข้อมูลแจ้งซ่อม",repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp)
+        #cc
+        elif event.message.text == '.ยกเลิก':
+            repair_id = None
+            repiar_type = None
+            repiar = None
+            location =None
+            phonenumber = None
+            status = None 
+            detail = None
+        #เช็คสถิติการแจ้งซ่อม
         elif event.message.text == 'สถิติการแจ้งซ่อม':
             pending = mycol.count_documents({"status": "รอดำเนินการ"})
             in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
             success = mycol.count_documents({"status": "เสร็จสิ้น"})
             Showstatus(event,"สถิติการแจ้งซ่อม",pending,in_progress,success) 
-    
+            
     elif isinstance(event.message, LocationMessage):
         address=event.message.address #ที่อยู่ที่userแชร์มา
         lst_location = ['Suranaree','Suranari','SUT']
@@ -118,15 +152,22 @@ def handle_message(event):
                 c_location+=1
         if c_location>=1:
             location = address
+            latitude = event.message.latitude
+            longitude = event.message.longitude
             sendMessage(event,"รบกวนแจ้งเบอร์โทรศัพท์ค่ะ\nพิมพ์ -p(เว้นวรรค)ตามด้วยเบอร์\n(เช่น -p 0999999999)")
         elif i not in address : quickreply_asklocation(event,"กรุณากรอกที่อยู่ภายในมหาวิทยาลัยค่ะ")
    
-    # elif isinstance(event.message, ImageMessage):
-    #     message_content = line_bot_api.get_message_content('<message_id>')
-    #     with open("Pictures", 'wb') as fd:
-    #         for chunk in message_content.iter_content():
-    #             fd.write(chunk)
+    elif isinstance(event.message, ImageMessage):
+        message_content = line_bot_api.get_message_content(event.message.id)
+        quickreply_asklocation(event,"ขอทราบที่อยู่ค่ะ")
+
     else: sendMessage(event,random.choice(fallback))    
+    
+def urlimage(dist_name):
+    client = imgbbpy.SyncClient('e010a1c870aa4da729494ac9378741c2')
+    image = client.upload(file=r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp\{}'.format(dist_name))
+    print(image.url)
+    return image.url
 
 def sendMessage(event,message):
     line_bot_api.reply_message(
@@ -134,9 +175,13 @@ def sendMessage(event,message):
         TextSendMessage(text=message),
         print(message))
 
-# def sendImage(event):
-#     line_bot_api.
-    
+def sendImage(event,ori_url,pre_url):
+    image_message = ImageSendMessage(
+        original_content_url=ori_url,
+        preview_image_url=pre_url
+    )
+    line_bot_api.reply_message(event.reply_token, image_message)
+
 def quickreply_repairtype(event,message):
     line_bot_api.reply_message(
             event.reply_token,
@@ -169,7 +214,25 @@ def quickreply_asklocation(event,message):
                             action=LocationAction(label="แชร์ที่อยู่")
                         )
                     ])))
-
+    
+def imageaction(event,message):
+    line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(
+                text=message,
+                quick_reply=QuickReply(
+                    items=[
+                        QuickReplyButton(
+                            action=CameraAction(label="ถ่ายภาพ")
+                        ),
+                        QuickReplyButton(
+                            action=CameraRollAction(label="เลือกภาพถ่าย")
+                        ),
+                        QuickReplyButton(
+                            action=MessageAction(label="ไม่มีรูปถ่าย")
+                        )
+                    ])))
+    
 def plumbing_system(event,message):
     line_bot_api.reply_message(
             event.reply_token,
@@ -233,8 +296,6 @@ def landscape(event,message):
                         )
                     ])))
 
-
-status = 'รอดำเนินการ'
 def confirmdata(event,message):
     line_bot_api.reply_message(
         event.reply_token,
@@ -277,16 +338,15 @@ def generate_id():
     id = str(id[:5])
     id = "SUT"+id
     return id
-repair_id = generate_id()
 
-def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,status,detail):
+def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp):
         flex_message = FlexSendMessage(
             alt_text= message,
             contents={
             "type": "bubble",
             "hero": {
                 "type": "image",
-                "url": "https://scdn.line-apps.com/n/channel_devcenter/img/fx/01_1_cafe.png",
+                "url": "{}".format(url),
                 "size": "full",
                 "aspectRatio": "20:13",
                 "aspectMode": "cover",
@@ -458,6 +518,26 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                             "text": detail,
                             "flex": 8,
                             "size": "sm"
+                        }
+                        ],
+                        "spacing": "sm"
+                    },{
+                        "type": "box",
+                        "layout": "baseline",
+                        "contents": [
+                        {
+                            "type": "text",
+                            "text": "วันที่",
+                            "color": "#666666",
+                            "flex": 5,
+                            "size": "sm"
+                        },
+                        {
+                            "type": "text",
+                            "text": timestamp,
+                            "size": "sm",
+                            "color": "#666666",
+                            "flex": 8
                         }
                         ],
                         "spacing": "sm"
@@ -1108,14 +1188,21 @@ def StatusSuccess(event,message,yourid):
         )
     line_bot_api.reply_message(event.reply_token, flex_message)
        
-def yes():
-    print("ประเภทงานบริการ: {}\n แจ้งซ่อม: {}\n สถานที่: {}\n หมายเลขโทรศัพท์: {}\n สถานะ: {}\n รายละเอียดเพิ่มเติม: {}".format(repiar_type,repiar,location,phonenumber,status,detail))
-
-def insertdb():
-    global repair_id
-    mydict = { "repair_id": repair_id,"repair_type": repiar_type,"repiar": repiar , "address": location, "tel": phonenumber,"status": status, "note": detail}
-    x = mycol.insert_one(mydict)
-    print(x)
-
+def insertdb(repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp,latitude,longitude):
+    global url
+    ext='jpg'
+    with tempfile.NamedTemporaryFile(dir=static_tmp_path, prefix=ext + '-', delete=False) as tf:
+        for chunk in message_content.iter_content():
+            tf.write(chunk)
+        tempfile_path = tf.name
+        dist_path = tempfile_path + '.' + ext
+        dist_name = os.path.basename(dist_path)
+        tf.close()
+        os.rename(tempfile_path, dist_path)
+        os.chdir(r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp')
+        url = urlimage(dist_name)
+        mydict = { "repair_id": repair_id,"repair_type": repiar_type,"repiar": repiar ,"image": url, "address": location,"latitude": latitude,"longitud":longitude,"tel": phonenumber,"status": status, "note": detail,"timestamp":timestamp}
+        x = mycol.insert_one(mydict)
+        
 if __name__ == '__main__':
     app.run(debug=True)
