@@ -1,15 +1,14 @@
 from flask import Flask, request, abort
 from linebot import (LineBotApi, WebhookHandler)
 from linebot.exceptions import (InvalidSignatureError)
-from linebot.models import (CameraAction,MessageEvent,ImageSendMessage,TextMessage,ImageMessage,CameraRollAction,TextSendMessage,QuickReply,TemplateSendMessage,FlexSendMessage,PostbackAction,QuickReplyButton,MessageAction,LocationMessage,LocationAction,ConfirmTemplate)
+from linebot.models import (MessageEvent,ImageSendMessage,CameraAction,CameraRollAction,TextMessage,ImageMessage, TextSendMessage,QuickReply,TemplateSendMessage,FlexSendMessage,PostbackAction,QuickReplyButton,MessageAction,LocationMessage,LocationAction,ConfirmTemplate)
 import pymongo
 import uuid
 import random
-import datetime
 import tempfile
 import os
 import imgbbpy
-import folium
+import datetime
 now = datetime.datetime.now()
 current_time = now.strftime("%Y-%m-%d %H:%M:%S")
 static_tmp_path = os.path.join(os.path.dirname(__file__),'static','tmp')
@@ -25,9 +24,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    start_coords = (46.9540700, 142.7360300)
-    folium_map = folium.Map(location=start_coords, zoom_start=14)
-    return folium_map._repr_html_()
+    return 'Hello World!'
 
 @app.route('/webhook', methods=['GET','POST'])
 def webhook():
@@ -46,8 +43,8 @@ def webhook():
 @handler.add(MessageEvent, message=(TextMessage,LocationMessage,ImageMessage))
 def handle_message(event):
     global repair_id
-    global repiar_type
-    global repiar
+    global repair_type
+    global repair
     global detail
     global latitude
     global longitude
@@ -63,18 +60,17 @@ def handle_message(event):
         #แจ้งซ่อม
         elif event.message.text == 'แจ้งซ่อม' : 
             quickreply_repairtype(event,"เลือกประเภทงานบริการ")
-            
         elif event.message.text == 'แจ้งซ่อมระบบประปา' :
-            repiar_type = 'แจ้งซ่อมระบบประปา'
+            repair_type = 'แจ้งซ่อมระบบประปา'
             plumbing_system(event,"รายละเอียดแจ้งซ่อม")
         elif event.message.text == 'แจ้งซ่อมไฟฟ้า' :
-            repiar_type = 'แจ้งซ่อมไฟฟ้า' 
+            repair_type = 'แจ้งซ่อมไฟฟ้า' 
             electrical_system(event,"รายละเอียดแจ้งซ่อม")
         elif event.message.text == 'งานซ่อมบำรุงรักษา' : 
-            repiar_type = 'งานซ่อมบำรุงรักษา'
+            repair_type = 'งานซ่อมบำรุงรักษา'
             maintenance(event,"รายละเอียดแจ้งซ่อม")
         elif event.message.text == 'แจ้งงานภูมิทัศน์' : 
-            repiar_type = 'แจ้งงานภูมิทัศน์'
+            repair_type = 'แจ้งงานภูมิทัศน์'
             landscape(event,"รายละเอียดแจ้งซ่อม")
         #เช็ครายละเอียดเพิ่มเติม
         elif (event.message.text[0] == '-' and event.message.text[1] == 'd') or (event.message.text[0] == '-' and event.message.text[1] == '*') :
@@ -87,7 +83,7 @@ def handle_message(event):
             line_bot_api.reply_message(event,"สามารถติดต่อได้ตามช่องทางด้านล่างเลยค่ะ")
         #ปัญหาที่จะแจ้งซ่อม
         elif event.message.text in repair_list:
-            repiar=event.message.text
+            repair=event.message.text
             imageaction(event,"รูปภาพประกอบค่ะ")
             
         #เช็คเบอร์โทรศัพท์
@@ -120,29 +116,39 @@ def handle_message(event):
                     else: sendMessage(event,"ไอดีแจ้งซ่อมไม่ถูกต้องค่ะ")
             else: sendMessage(event,"กรุณาตรวจสอบไอดีแจ้งซ่อมค่ะ")
         #cf
-        elif event.message.text == '.ยืนยัน':
+        elif event.message.text == '.ยืนยัน':  
             status = 'รอดำเนินการ'
             repair_id = generate_id()
-            test_result = line_bot_api.test_webhook_endpoint()
-            timestamp = test_result.timestamp
-            insertdb(repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp,latitude,longitude)            
-            detail_data(event,"ข้อมูลแจ้งซ่อม",repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp)
+            insertdb(repair_id,repair_type,repair,location,phonenumber,status,detail,current_time,latitude,longitude)  
+            if mycol.count_documents({"repair_id": repair_id}) > 0:
+                for i in mycol.find({"repair_id": repair_id}):
+                    id_db = i['repair_id']
+                    type_db =i['repair_type']
+                    img_url=i['image']
+                    repair_db=i['repair']
+                    location_db=i['address']
+                    tel_db=i['tel']
+                    status_db=i['status']
+                    note_db=i['note']
+                    time_db=i['timestamp']          
+            detail_data(event,"ข้อมูลแจ้งซ่อม",id_db,type_db,repair_db,location_db,tel_db,status_db,note_db,time_db,img_url)
         #cc
         elif event.message.text == '.ยกเลิก':
             repair_id = None
-            repiar_type = None
-            repiar = None
+            repair_type = None
+            repair = None
             location =None
             phonenumber = None
             status = None 
             detail = None
-        #เช็คสถิติการแจ้งซ่อม
+            sendMessage(event,"ทำการยกเลิกเรียบร้อยค่ะ")
+        #เช็คสถิติ
         elif event.message.text == 'สถิติการแจ้งซ่อม':
             pending = mycol.count_documents({"status": "รอดำเนินการ"})
             in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
             success = mycol.count_documents({"status": "เสร็จสิ้น"})
             Showstatus(event,"สถิติการแจ้งซ่อม",pending,in_progress,success) 
-            
+    
     elif isinstance(event.message, LocationMessage):
         address=event.message.address #ที่อยู่ที่userแชร์มา
         lst_location = ['Suranaree','Suranari','SUT']
@@ -152,6 +158,7 @@ def handle_message(event):
                 c_location+=1
         if c_location>=1:
             location = address
+            location = address
             latitude = event.message.latitude
             longitude = event.message.longitude
             sendMessage(event,"รบกวนแจ้งเบอร์โทรศัพท์ค่ะ\nพิมพ์ -p(เว้นวรรค)ตามด้วยเบอร์\n(เช่น -p 0999999999)")
@@ -160,7 +167,6 @@ def handle_message(event):
     elif isinstance(event.message, ImageMessage):
         message_content = line_bot_api.get_message_content(event.message.id)
         quickreply_asklocation(event,"ขอทราบที่อยู่ค่ะ")
-
     else: sendMessage(event,random.choice(fallback))    
     
 def urlimage(dist_name):
@@ -174,14 +180,7 @@ def sendMessage(event,message):
         event.reply_token,
         TextSendMessage(text=message),
         print(message))
-
-def sendImage(event,ori_url,pre_url):
-    image_message = ImageSendMessage(
-        original_content_url=ori_url,
-        preview_image_url=pre_url
-    )
-    line_bot_api.reply_message(event.reply_token, image_message)
-
+    
 def quickreply_repairtype(event,message):
     line_bot_api.reply_message(
             event.reply_token,
@@ -214,7 +213,7 @@ def quickreply_asklocation(event,message):
                             action=LocationAction(label="แชร์ที่อยู่")
                         )
                     ])))
-    
+
 def imageaction(event,message):
     line_bot_api.reply_message(
             event.reply_token,
@@ -227,12 +226,9 @@ def imageaction(event,message):
                         ),
                         QuickReplyButton(
                             action=CameraRollAction(label="เลือกภาพถ่าย")
-                        ),
-                        QuickReplyButton(
-                            action=MessageAction(label="ไม่มีรูปถ่าย")
                         )
                     ])))
-    
+
 def plumbing_system(event,message):
     line_bot_api.reply_message(
             event.reply_token,
@@ -339,14 +335,14 @@ def generate_id():
     id = "SUT"+id
     return id
 
-def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp):
+def detail_data(event,message,id_db,type_db,repair_db,location_db,tel_db,status_db,note_db,time_db,img_url):
         flex_message = FlexSendMessage(
             alt_text= message,
             contents={
             "type": "bubble",
             "hero": {
                 "type": "image",
-                "url": "{}".format(url),
+                "url": "{}".format(img_url),
                 "size": "full",
                 "aspectRatio": "20:13",
                 "aspectMode": "cover",
@@ -386,7 +382,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": repair_id,
+                            "text": id_db,
                             "color": "#666666",
                             "size": "sm",
                             "flex": 8
@@ -411,7 +407,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": repiar_type,
+                            "text": type_db,
                             "size": "sm",
                             "flex": 8,
                             "color": "#666666"
@@ -431,7 +427,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": repiar,
+                            "text": repair_db,
                             "flex": 8,
                             "size": "sm",
                             "color": "#666666"
@@ -452,7 +448,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": location,
+                            "text": location_db,
                             "size": "sm",
                             "color": "#666666",
                             "flex": 8
@@ -473,7 +469,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": phonenumber,
+                            "text": tel_db,
                             "flex": 8,
                             "size": "sm",
                             "color": "#666666"
@@ -494,7 +490,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": status,
+                            "text": status_db,
                             "flex": 8,
                             "size": "sm",
                             "color": "#666666"
@@ -515,7 +511,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": detail,
+                            "text": note_db,
                             "flex": 8,
                             "size": "sm"
                         }
@@ -534,7 +530,7 @@ def detail_data(event,message,repair_id,repiar_type,repiar,location,phonenumber,
                         },
                         {
                             "type": "text",
-                            "text": timestamp,
+                            "text": time_db,
                             "size": "sm",
                             "color": "#666666",
                             "flex": 8
@@ -1188,7 +1184,7 @@ def StatusSuccess(event,message,yourid):
         )
     line_bot_api.reply_message(event.reply_token, flex_message)
        
-def insertdb(repair_id,repiar_type,repiar,location,phonenumber,status,detail,timestamp,latitude,longitude):
+def insertdb(repair_id,repair_type,repair,location,phonenumber,status,detail,timestamp,latitude,longitude):
     global url
     ext='jpg'
     with tempfile.NamedTemporaryFile(dir=static_tmp_path, prefix=ext + '-', delete=False) as tf:
@@ -1201,8 +1197,8 @@ def insertdb(repair_id,repiar_type,repiar,location,phonenumber,status,detail,tim
         os.rename(tempfile_path, dist_path)
         os.chdir(r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp')
         url = urlimage(dist_name)
-        mydict = { "repair_id": repair_id,"repair_type": repiar_type,"repiar": repiar ,"image": url, "address": location,"latitude": latitude,"longitud":longitude,"tel": phonenumber,"status": status, "note": detail,"timestamp":timestamp}
+        mydict = { "repair_id": repair_id,"repair_type": repair_type,"repair": repair ,"image": url, "address": location,"latitude": latitude,"longitud":longitude,"tel": phonenumber,"status": status, "note": detail,"timestamp":timestamp}
         x = mycol.insert_one(mydict)
-        
+
 if __name__ == '__main__':
     app.run(debug=True)
