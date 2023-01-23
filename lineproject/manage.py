@@ -51,6 +51,7 @@ def handle_message(event):
     global phonenumber
     global location
     global status
+    global url
     global message_content
     repair_list = ['น้ำประปาไม่ไหล','มีกลิ่น,ขุ่น,มิเตอร์','ระบบไฟฟ้า','ระบบปรับอากาศ','โยธาสถาปัตย์','ประปาและสุขาภิบาล','ตัดหญ้า','ตัดแต่งกิ่ง','กำจัดแมลง']
     fallback = ['ขออภัยค่ะ ฉันไม่เข้าใจ','ขอโทษค่ะ ฉันไม่เข้าใจ','กรุณาตรวจสอบข้อความก่อนส่งค่ะ','คุณต้องการใช้บริการอะไรคะ','หากต้องการใช้บริการกรุณากดเมนูดูได้เลยค่ะ']
@@ -73,10 +74,10 @@ def handle_message(event):
             repair_type = 'แจ้งงานภูมิทัศน์'
             landscape(event,"รายละเอียดแจ้งซ่อม")
         #เช็ครายละเอียดเพิ่มเติม
-        elif (event.message.text[0] == '-' and event.message.text[1] == 'd') or (event.message.text[0] == '-' and event.message.text[1] == '*') :
+        elif event.message.text[0] == '-' or (event.message.text[0] == '-' and event.message.text[1] == '*') :
             if event.message.text[1] == '*':
                 detail='-'
-            else:detail = event.message.text[3:]
+            else:detail = event.message.text[0:]
             confirmdata(event,"หากตรวจสอบข้อมูลเรียบร้อยแล้ว\nกรุณากดยืนยันค่ะ")
         #ช่องทางการติดต่อ
         elif event.message.text == 'ช่องทางการติดต่อ' : 
@@ -84,17 +85,13 @@ def handle_message(event):
         #ปัญหาที่จะแจ้งซ่อม
         elif event.message.text in repair_list:
             repair=event.message.text
+            askforimage(event,"มีรูปภาพประกอบหรือไม่")
+        elif event.message.text == '.มี':
             imageaction(event,"รูปภาพประกอบค่ะ")
-            
-        #เช็คเบอร์โทรศัพท์
-        elif event.message.text[0] == '-' and event.message.text[1] == 'p':
-            if event.message.text[3:].isdigit() and len(event.message.text[3:])==10:
-                phonenumber = event.message.text[3:]
-                if phonenumber[0] == "0" and (phonenumber[1]=="6" or phonenumber[1]=="9" or phonenumber[1]=="8"):
-                    phonenumber = event.message.text[3:]
-                    sendMessage(event,"หากต้องการแจ้งหมายเหตุ\nพิมพ์-d(เว้นวรรค)ตามด้วยข้อความ\nหากไม่มีให้พิมพ์ \"-*\")")
-                else: sendMessage(event,"ตรวจวสอบเบอร์โทรศัพท์อีกครั้งค่ะ")
-            else: sendMessage(event,"กรุณาแจ้งเบอร์โทรศัพท์ที่ถูกต้องค่ะ")
+        elif event.message.text == '.ไม่มี':
+            quickreply_asklocation(event,"ขอทราบที่อยู่ค่ะ")
+            url='https://scdn.line-apps.com/n/channel_devcenter/img/fx/01_1_cafe.png'
+        
         #ตรวจสอบสถานะ
         elif event.message.text == 'ตรวจสอบสถานะ':
             checkstatus(event,"ต้องการตรวจสอบแบบไหนดีคะ")
@@ -148,21 +145,23 @@ def handle_message(event):
             in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
             success = mycol.count_documents({"status": "เสร็จสิ้น"})
             Showstatus(event,"สถิติการแจ้งซ่อม",pending,in_progress,success) 
+        
+        #เช็คเบอร์โทรศัพท์
+        elif event.message.text.isdigit() and event.message.text[0]=='0':
+            phonenumber = event.message.text
+            if len(phonenumber)==10:
+                if phonenumber[1]=="6" or phonenumber[1]=="9" or phonenumber[1]=="8":
+                    phonenumber = event.message.text[3:]
+                    sendMessage(event,"หากต้องการแจ้งหมายเหตุ\nพิมพ์-ตามด้วยข้อความ\nหากไม่มีให้พิมพ์ \"-*\")")
+                else: sendMessage(event,"ตรวจวสอบเบอร์โทรศัพท์อีกครั้งค่ะ")
+            else:sendMessage(event,"กรุณาพิมพ์เบอร์ฌโทรศัพท์ให้ครบ10ตัวค่ะ")
     
     elif isinstance(event.message, LocationMessage):
         address=event.message.address #ที่อยู่ที่userแชร์มา
-        lst_location = ['Suranaree','Suranari','SUT']
-        c_location=0
-        for i in lst_location:
-            if i in address:
-                c_location+=1
-        if c_location>=1:
-            location = address
-            location = address
-            latitude = event.message.latitude
-            longitude = event.message.longitude
-            sendMessage(event,"รบกวนแจ้งเบอร์โทรศัพท์ค่ะ\nพิมพ์ -p(เว้นวรรค)ตามด้วยเบอร์\n(เช่น -p 0999999999)")
-        elif i not in address : quickreply_asklocation(event,"กรุณากรอกที่อยู่ภายในมหาวิทยาลัยค่ะ")
+        location = address
+        latitude = event.message.latitude
+        longitude = event.message.longitude
+        sendMessage(event,"รบกวนแจ้งเบอร์โทรศัพท์ค่ะ")
    
     elif isinstance(event.message, ImageMessage):
         message_content = line_bot_api.get_message_content(event.message.id)
@@ -226,6 +225,21 @@ def imageaction(event,message):
                         ),
                         QuickReplyButton(
                             action=CameraRollAction(label="เลือกภาพถ่าย")
+                        )
+                    ])))
+    
+def askforimage(event,message):
+    line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(
+                text=message,
+                quick_reply=QuickReply(
+                    items=[
+                        QuickReplyButton(
+                            action=MessageAction(label="มี", text=".มี")
+                        ),
+                        QuickReplyButton(
+                            action=MessageAction(label="ไม่มี", text=".ไม่มี")
                         )
                     ])))
 
@@ -377,7 +391,6 @@ def detail_data(event,message,id_db,type_db,repair_db,location_db,tel_db,status_
                             "text": "ไอดีแจ้งซ่อม",
                             "color": "#666666",
                             "size": "sm",
-                            "margin": "none",
                             "flex": 5
                         },
                         {
@@ -386,10 +399,6 @@ def detail_data(event,message,id_db,type_db,repair_db,location_db,tel_db,status_
                             "color": "#666666",
                             "size": "sm",
                             "flex": 8
-                        },
-                        {
-                            "type": "text",
-                            "text": "hello, world"
                         }
                         ]
                     },
@@ -1185,20 +1194,21 @@ def StatusSuccess(event,message,yourid):
     line_bot_api.reply_message(event.reply_token, flex_message)
        
 def insertdb(repair_id,repair_type,repair,location,phonenumber,status,detail,timestamp,latitude,longitude):
-    global url
-    ext='jpg'
-    with tempfile.NamedTemporaryFile(dir=static_tmp_path, prefix=ext + '-', delete=False) as tf:
-        for chunk in message_content.iter_content():
-            tf.write(chunk)
-        tempfile_path = tf.name
-        dist_path = tempfile_path + '.' + ext
-        dist_name = os.path.basename(dist_path)
-        tf.close()
-        os.rename(tempfile_path, dist_path)
-        os.chdir(r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp')
-        url = urlimage(dist_name)
-        mydict = { "repair_id": repair_id,"repair_type": repair_type,"repair": repair ,"image": url, "address": location,"latitude": latitude,"longitud":longitude,"tel": phonenumber,"status": status, "note": detail,"timestamp":timestamp}
-        x = mycol.insert_one(mydict)
+    if url != '':    
+        ext='jpg'
+        with tempfile.NamedTemporaryFile(dir=static_tmp_path, prefix=ext + '-', delete=False) as tf:
+            for chunk in message_content.iter_content():
+                tf.write(chunk)
+            tempfile_path = tf.name
+            dist_path = tempfile_path + '.' + ext
+            dist_name = os.path.basename(dist_path)
+            tf.close()
+            os.rename(tempfile_path, dist_path)
+            os.chdir(r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp')
+            url = urlimage(dist_name)
+    #
+    mydict = { "repair_id": repair_id,"repair_type": repair_type,"repair": repair ,"image": url, "address": location,"latitude": latitude,"longitud":longitude,"tel": phonenumber,"status": status, "note": detail,"timestamp":timestamp}
+    x = mycol.insert_one(mydict)
 
 if __name__ == '__main__':
     app.run(debug=True)
