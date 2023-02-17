@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import (LineBotApi, WebhookHandler)
 from linebot.exceptions import (InvalidSignatureError)
-from linebot.models import (MessageEvent, StickerMessage, CameraAction,VideoMessage, CameraRollAction, TextMessage, ImageMessage, TextSendMessage, QuickReply, TemplateSendMessage, FlexSendMessage, PostbackAction, QuickReplyButton, MessageAction, LocationMessage, LocationAction, ConfirmTemplate)
+from linebot.models import (MessageEvent, StickerMessage,ImageSendMessage, CameraAction,VideoMessage, CameraRollAction, TextMessage, ImageMessage, TextSendMessage, QuickReply, TemplateSendMessage, FlexSendMessage, PostbackAction, QuickReplyButton, MessageAction, LocationMessage, LocationAction, ConfirmTemplate)
 import pymongo
 import uuid
 import random
@@ -123,6 +123,19 @@ def handle_message(event):
             checkstatus(event, "ต้องการตรวจสอบแบบไหนดีคะ")
         elif event.message.text == 'ใส่ไอดีแจ้งซ่อม':
             sendMessage(event, "กรุณาใส่ไอดีแจ้งซ่อมค่ะ")
+        #คู่มือ
+        elif event.message.text == 'คู่มือการใช้งาน':
+            quickreply_guid(event, "ต้องการทราบอะไรคะ")
+        elif event.message.text == '.การแจ้งซ่อม':
+            url=urlimage2('3.PNG')
+            sendImage(event, url,"คู่มือการแจ้งซ่อม")
+        elif event.message.text == '.การตรวจสอบการแจ้งซ่อม':
+            url=urlimage2('4.PNG')
+            sendImage(event, url,"คู่มือการตรวจสอบการแจ้งซ่อม")
+        elif event.message.text == '.การตรวจสอบสถานะ':
+            url=urlimage2('5.PNG')
+            sendImage(event, url,"คู่มือการตรวจสอบสถานะ")
+        
         # เช็คไอดีแจ้งซ่อม
         elif event.message.text[0] == 'S' and event.message.text[1] == 'U' and event.message.text[2] == 'T':
             yourid = event.message.text
@@ -232,6 +245,11 @@ def urlimage(dist_name):
         file=r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp\{}'.format(dist_name))
     return image.url
 
+def urlimage2(name):
+    client = imgbbpy.SyncClient('e010a1c870aa4da729494ac9378741c2')
+    image = client.upload(
+        file=r'C:\Users\ASUS\Pictures\คู่มือ\{}'.format(name))
+    return image.url
 
 def sendMessage(event, message):
     line_bot_api.reply_message(
@@ -239,6 +257,15 @@ def sendMessage(event, message):
         TextSendMessage(text=message),
         print(message))
 
+def sendImage(event,url,message):
+    image_message = ImageSendMessage(
+        alt_text=message,
+        original_content_url='{}'.format(url),
+        preview_image_url='{}'.format(url)
+    )
+    line_bot_api.reply_message(event.reply_token, image_message)
+
+    
 def quickreply_repairtype(event, message):
     line_bot_api.reply_message(
         event.reply_token,
@@ -265,6 +292,27 @@ def quickreply_repairtype(event, message):
                     QuickReplyButton(
                         action=MessageAction(
                             label="อื่นๆ(โปรดระบุ)", text="อื่นๆ")
+                    ),
+                ])))
+    
+def quickreply_guid(event, message):
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(
+            text=message,
+            quick_reply=QuickReply(
+                items=[
+                    QuickReplyButton(
+                        action=MessageAction(
+                            label="การแจ้งซ่อม", text=".การแจ้งซ่อม")
+                    ),
+                    QuickReplyButton(
+                        action=MessageAction(
+                            label="การตรวจสอบการแจ้งซ่อม", text=".การตรวจสอบการแจ้งซ่อม")
+                    ),
+                    QuickReplyButton(
+                        action=MessageAction(
+                            label="การตรวจสอบสถานะ", text=".การตรวจสอบสถานะ")
                     ),
                 ])))
 
@@ -750,7 +798,7 @@ def Showstatus(event, message, pending, in_progress, success, all_status):
                             },
                             {
                                 "type": "text",
-                                "text": "{} ({:.2f}%)".format(pending,pending/all_status),
+                                "text": "{} ({:.2f}%)".format(pending,(pending/all_status)*100),
                                 "color": "#ffffff",
                                 "align": "start",
                                 "size": "xs",
@@ -815,7 +863,7 @@ def Showstatus(event, message, pending, in_progress, success, all_status):
                             },
                             {
                                 "type": "text",
-                                "text": "{} ({:.2f}%)".format(in_progress,in_progress/all_status),
+                                "text": "{} ({:.2f}%)".format(in_progress,(in_progress/all_status)*100),
                                 "color": "#ffffff",
                                 "align": "start",
                                 "size": "xs",
@@ -880,7 +928,7 @@ def Showstatus(event, message, pending, in_progress, success, all_status):
                             },
                             {
                                 "type": "text",
-                                "text": "{} ({:.2f}%)".format(success,success/all_status),
+                                "text": "{} ({:.2f}%)".format(success,((success/all_status)*100)),
                                 "color": "#ffffff",
                                 "align": "start",
                                 "size": "xs",
