@@ -1,0 +1,58 @@
+Metadata-Version: 2.1
+Name: imgbbpy
+Version: 0.1.3
+Summary: An Asynchronous and Synchronous API Wrapper for the Imgbb API.
+Home-page: https://github.com/scrazzz/imgbbpy/
+Author: scrazzz
+License: MIT
+Project-URL: Documentation, https://github.com/scrazzz/imgbbpy/blob/main/documentation.md
+Project-URL: Issue tracker, https://github.com/scrazzz/imgbbpy/issues
+Platform: UNKNOWN
+Requires-Python: >=3.7.0
+Description-Content-Type: text/markdown
+Requires-Dist: aiohttp
+Requires-Dist: requests
+
+# imgbbpy
+An Asynchronous and Synchronous API Wrapper for the Imgbb API.
+
+## Installation
+Install imgbbpy via `pip`.
+
+```sh
+pip install imgbbpy
+```
+imgbbpy requires Python 3.7+
+
+## Quickstart
+Asynchronous usage:
+```py
+import asyncio
+import imgbbpy
+
+async def main():
+    client = imgbbpy.AsyncClient('API KEY')
+    image = await client.upload(file='path/to/image.jpeg')
+    print(image.url)
+
+asyncio.run(main())
+```
+
+Synchronous usage:
+```py
+import imgbbpy
+
+client = imgbbpy.SyncClient('API KEY')
+image = client.upload(file='path/to/image.png')
+print(image.url)
+```
+
+You can get an API Key from https://api.imgbb.com.
+
+## Documentation
+Documentation can be found in the `documentation.md` file.
+
+## License
+MIT, see LICENSE for more details.
+
+

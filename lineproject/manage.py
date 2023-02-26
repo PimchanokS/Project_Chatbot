@@ -127,13 +127,13 @@ def handle_message(event):
         elif event.message.text == 'คู่มือการใช้งาน':
             quickreply_guid(event, "ต้องการทราบอะไรคะ")
         elif event.message.text == '.การแจ้งซ่อม':
-            url=urlimage2('3.PNG')
+            url=urlimage2('6.PNG')
             sendImage(event, url,"คู่มือการแจ้งซ่อม")
         elif event.message.text == '.การตรวจสอบการแจ้งซ่อม':
-            url=urlimage2('4.PNG')
+            url=urlimage2('7.PNG')
             sendImage(event, url,"คู่มือการตรวจสอบการแจ้งซ่อม")
         elif event.message.text == '.การตรวจสอบสถานะ':
-            url=urlimage2('5.PNG')
+            url=urlimage2('8.PNG')
             sendImage(event, url,"คู่มือการตรวจสอบสถานะ")
         
         # เช็คไอดีแจ้งซ่อม
