@@ -66,6 +66,13 @@ def handle_message(event):
                 event, "สวัสดีค่ะ เราคือแชทบอทแจ้งซ่อม หากต้องการใช้บริการสามารถกดที่ปุ่มเมนูเพื่อเลือกบริการที่ต้องการค่ะ")
         # แจ้งซ่อม
         elif event.message.text == 'แจ้งซ่อม':
+            repair_id = None
+            repair_type = None
+            repair = None
+            location = None
+            phonenumber = None
+            status = None
+            detail = None
             quickreply_repairtype(event, "เลือกประเภทงานบริการ")
         elif event.message.text == 'แจ้งซ่อมระบบประปา':
             repair_type = 'แจ้งซ่อมระบบประปา'
