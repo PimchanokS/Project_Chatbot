@@ -23,11 +23,6 @@ mycol = mydb["Repair_List"]
 app = Flask(__name__)
 
 
-@app.route('/')
-def index():
-    return 'Hello World!'
-
-
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     # get X-Line-Signature header value
@@ -62,8 +57,7 @@ def handle_message(event):
                 'คุณต้องการใช้บริการอะไรคะ', 'หากต้องการใช้บริการกรุณากดเมนูดูได้เลยค่ะ']
     if isinstance(event.message, TextMessage):
         if 'สวัสดี' in event.message.text:
-            sendMessage(
-                event, "สวัสดีค่ะ เราคือแชทบอทแจ้งซ่อม หากต้องการใช้บริการสามารถกดที่ปุ่มเมนูเพื่อเลือกบริการที่ต้องการค่ะ")
+            sendMessage(event, "สวัสดีค่ะ เราคือแชทบอทแจ้งซ่อม หากต้องการใช้บริการสามารถกดที่ปุ่มเมนูเพื่อเลือกบริการที่ต้องการค่ะ")
         # แจ้งซ่อม
         elif event.message.text == 'แจ้งซ่อม':
             repair_id = None
@@ -88,16 +82,14 @@ def handle_message(event):
             landscape(event, "รายละเอียดแจ้งซ่อม")
         elif event.message.text == 'อื่นๆ':
             repair_type = 'อื่นๆ'
-            sendMessage(
-                event, "กรุณาระบุเพิ่มเติมค่ะ \nพิมพ์(เว้นวรรค)ตามด้วยสิ่งที่ต้องการแจ้งซ่อม")
+            sendMessage(event, "กรุณาระบุเพิ่มเติมค่ะ \nพิมพ์(เว้นวรรค)ตามด้วยสิ่งที่ต้องการแจ้งซ่อม")
         # เช็ครายละเอียดเพิ่มเติม
         elif event.message.text[0] == '-' or (event.message.text[0] == '-' and event.message.text[1] == '*'):
             if event.message.text[1] == '*':
                 detail = '-'
             else:
                 detail = event.message.text[1:]
-            confirmdata(
-                event, "หากตรวจสอบข้อมูลเรียบร้อยแล้ว\nกรุณากดยืนยันค่ะ")
+            confirmdata(event, "หากตรวจสอบข้อมูลเรียบร้อยแล้ว\nกรุณากดยืนยันค่ะ")
         # ช่องทางการติดต่อ(ยังไม่เสร็จ)
         elif event.message.text == 'ตรวจสอบการแจ้งซ่อม':
             userid = event.source.user_id
@@ -110,8 +102,7 @@ def handle_message(event):
                 letter = "สถานะของคุณมีทั้งหมด %d รายการ\n\n｡☆✼★━━━━━━━━★✼☆｡\n" % n
                 sendMessage(event, letter+yourdata)
             else:
-                sendMessage(
-                    event, "ไม่มีรายการแจ้งซ่อมของคุณ กรุณาแจ้งซ่อมก่อนค่ะ")
+                sendMessage(event, "ไม่มีรายการแจ้งซ่อมของคุณ กรุณาแจ้งซ่อมก่อนค่ะ")
         # ปัญหาที่จะแจ้งซ่อม
         elif event.message.text[0] == ' ':
             repair = event.message.text[1:]
@@ -173,12 +164,60 @@ def handle_message(event):
             except NameError: detail = None
             try: url
             except NameError: url = None
-            if repair_type is None : sendMessage(event, "คุณไม่ได้ประเภทบริการ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
-            if repair is None: sendMessage(event, "คุณไม่ได้แจ้งแจ้งรายละเอียด กรุณาแจ้งซ่อมอีกครั้งค่ะ")
-            if location is None: sendMessage(event, "คุณไม่ได้แจ้งสถานที่ซ่อม กรุณาแจ้งซ่อมอีกครั้งค่ะ")
-            if phonenumber is None: sendMessage(event, "คุณไม่ได้แจ้งเบอร์โทรศัพท์ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
-            if detail is None: sendMessage(event, "คุณไม่ได้แจ้งหมายเหตุ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
-            if url is None: sendMessage(event, "คุณไม่ได้แจ้งรูปภาพประกอบ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
+            if repair_type is None : 
+                sendMessage(event, "คุณไม่ได้ประเภทบริการ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
+                repair_id = None
+                repair_type = None
+                repair = None
+                location = None
+                phonenumber = None
+                status = None
+                detail = None
+            if repair is None: 
+                sendMessage(event, "คุณไม่ได้แจ้งแจ้งรายละเอียด กรุณาแจ้งซ่อมอีกครั้งค่ะ")
+                repair_id = None
+                repair_type = None
+                repair = None
+                location = None
+                phonenumber = None
+                status = None
+                detail = None
+            if location is None: 
+                sendMessage(event, "คุณไม่ได้แจ้งสถานที่ซ่อม กรุณาแจ้งซ่อมอีกครั้งค่ะ")
+                repair_id = None
+                repair_type = None
+                repair = None
+                location = None
+                phonenumber = None
+                status = None
+                detail = None
+            if phonenumber is None: 
+                sendMessage(event, "คุณไม่ได้แจ้งเบอร์โทรศัพท์ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
+                repair_id = None
+                repair_type = None
+                repair = None
+                location = None
+                phonenumber = None
+                status = None
+                detail = None
+            if detail is None: 
+                sendMessage(event, "คุณไม่ได้แจ้งหมายเหตุ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
+                repair_id = None
+                repair_type = None
+                repair = None
+                location = None
+                phonenumber = None
+                status = None
+                detail = None
+            if url is None: 
+                repair_id = None
+                repair_type = None
+                repair = None
+                location = None
+                phonenumber = None
+                status = None
+                detail = None
+                sendMessage(event, "คุณไม่ได้แจ้งรูปภาพประกอบ กรุณาแจ้งซ่อมอีกครั้งค่ะ")
             status = 'รอดำเนินการ'
             repair_id = generate_id()
             user_id = event.source.user_id
@@ -197,8 +236,7 @@ def handle_message(event):
                     status_db = i['status']
                     note_db = i['note']
                     time_db = i['timestamp']
-            detail_data(event, "ข้อมูลแจ้งซ่อม", id_db, type_db, repair_db,
-                        location_db, tel_db, status_db, note_db, time_db, img_url)
+            detail_data(event, "ข้อมูลแจ้งซ่อม", id_db, type_db, repair_db,location_db, tel_db, status_db, note_db, time_db, img_url)
         # cc
         elif event.message.text == 'ยกเลิก':
             repair_id = None
@@ -209,14 +247,16 @@ def handle_message(event):
             status = None
             detail = None
             sendMessage(event, "ทำการยกเลิกเรียบร้อยค่ะ")
+            
         # เช็คสถิติ
         elif event.message.text == 'สถิติการแจ้งซ่อม':
-            pending = mycol.count_documents({"status": "รอดำเนินการ"})
-            in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
-            success = mycol.count_documents({"status": "เสร็จสิ้น"})
-            all_status = mycol.count_documents({})
-            Showstatus(event, "สถิติการแจ้งซ่อม",
-                       pending, in_progress, success, all_status)
+            if mycol.count_documents({}) > 0:
+                pending = mycol.count_documents({"status": "รอดำเนินการ"})
+                in_progress = mycol.count_documents({"status": "กำลังดำเนินการ"})
+                success = mycol.count_documents({"status": "เสร็จสิ้น"})
+                all_status = mycol.count_documents({})
+                Showstatus(event, "สถิติการแจ้งซ่อม",pending, in_progress, success, all_status)
+            else: Showstatuszero(event, "สถิติการแจ้งซ่อม")
 
         # เช็คเบอร์โทรศัพท์
         elif event.message.text.isdigit() and event.message.text[0] == '0':
@@ -573,10 +613,6 @@ def detail_data(event, message, id_db, type_db, repair_db, location_db, tel_db, 
                 "size": "full",
                 "aspectRatio": "20:13",
                 "aspectMode": "cover",
-                "action": {
-                    "type": "uri",
-                    "uri": "http://linecorp.com/"
-                }
             },
             "body": {
                 "type": "box",
@@ -978,6 +1014,205 @@ def Showstatus(event, message, pending, in_progress, success, all_status):
             ]
         }
     )
+    line_bot_api.reply_message(event.reply_token, flex_message)
+    
+def Showstatuszero(event, message):
+    flex_message = FlexSendMessage(
+    alt_text=message,
+    contents={
+         "type": "carousel",
+         "contents": [
+            {
+                "type": "bubble",
+                "size": "micro",
+                "header": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "รอดำเนินการ",
+                            "color": "#ffffff",
+                            "align": "start",
+                            "size": "md",
+                            "gravity": "center",
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": "0 (0.00%)",
+                            "color": "#ffffff",
+                            "align": "start",
+                            "size": "xs",
+                            "gravity": "center",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": "#FF6B6E",
+                    "paddingTop": "19px",
+                    "paddingAll": "12px",
+                    "paddingBottom": "16px"
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "แจ้งซ่อมสำเร็จ",
+                                    "color": "#8C8C8C",
+                                    "size": "sm",
+                                    "align": "center"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "รอดำเนินการซ่อม",
+                                    "color": "#8C8C8C",
+                                    "size": "sm",
+                                    "align": "center"
+                                }
+                            ],
+                            "flex": 1
+                        }
+                    ],
+                    "spacing": "md",
+                    "paddingAll": "12px"
+                },
+                "styles": {
+                    "footer": {
+                    }
+                }
+            },
+            {
+                "type": "bubble",
+                "size": "micro",
+                "header": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "กำลังดำเนินการ",
+                            "color": "#ffffff",
+                            "align": "start",
+                            "size": "md",
+                            "gravity": "center",
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": "0 (0.00%)",
+                            "color": "#ffffff",
+                            "align": "start",
+                            "size": "xs",
+                            "gravity": "center",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": "#FDA50E",
+                    "paddingTop": "19px",
+                    "paddingAll": "12px",
+                    "paddingBottom": "16px"
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "กำลังดำเนินการซ่อม",
+                                    "color": "#8C8C8C",
+                                    "size": "sm",
+                                    "align": "center"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "ภายใน1-3วัน",
+                                    "color": "#8C8C8C",
+                                    "size": "sm",
+                                    "align": "center"
+                                }
+                            ],
+                            "flex": 1
+                        }
+                    ],
+                    "spacing": "md",
+                    "paddingAll": "12px"
+                },
+                "styles": {
+                    "footer": {
+                    }
+                }
+            },
+            {
+                "type": "bubble",
+                "size": "micro",
+                "header": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "เสร็จสิ้น",
+                            "color": "#ffffff",
+                            "align": "start",
+                            "size": "md",
+                            "gravity": "center",
+                            "weight": "bold"
+                        },
+                        {
+                            "type": "text",
+                            "text": "0 (0.00%)",
+                            "color": "#ffffff",
+                            "align": "start",
+                            "size": "xs",
+                            "gravity": "center",
+                            "margin": "lg"
+                        }
+                    ],
+                    "backgroundColor": "#27ACB2",
+                    "paddingTop": "19px",
+                    "paddingAll": "12px",
+                    "paddingBottom": "16px"
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "ดำเนินการซ่อมเสร็จสิ้น",
+                                    "color": "#8C8C8C",
+                                    "size": "sm",
+                                    "align": "center"
+                                }
+                            ],
+                            "flex": 1
+                        }
+                    ],
+                    "spacing": "md",
+                    "paddingAll": "12px"
+                },
+                "styles": {
+                    "footer": {
+                    }
+                }
+            }
+        ]
+    }
+)
     line_bot_api.reply_message(event.reply_token, flex_message)
 
 
@@ -1476,7 +1711,7 @@ def insertdb(repair_id, repair_type, repair, location, phonenumber, status, deta
                 r'C:\Users\ASUS\Documents\B6236182\Line_Chatbot\lineproject\static\tmp')
             url_img = urlimage(dist_name)
     elif url == 'No':
-        url_img = 'https://scdn.line-apps.com/n/channel_devcenter/img/fx/01_1_cafe.png'
+        url_img = 'https://pbs.twimg.com/media/FqJiiAjWAAE0VdF?format=jpg&name=small'
     mydict = {"user_id": user_id, "repair_id": repair_id, "repair_type": repair_type, "repair": repair, "image": url_img,
               "address": location, "tel": phonenumber, "status": status, "note": detail, "timestamp": timestamp}
     x = mycol.insert_one(mydict)
