@@ -507,7 +507,6 @@ def confirmdata(event, message):
             ))
     )
 
-
 def checkstatus(event, message):
     line_bot_api.reply_message(
         event.reply_token,
@@ -1010,7 +1009,66 @@ def Showstatus(event, message, pending, in_progress, success, all_status):
                         "footer": {
                         }
                     }
-                }
+                },
+                {
+                    "type": "bubble",
+                    "size": "micro",
+                    "header": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "การแจ้งซ่อมทั้งหมด",
+                                "color": "#ffffff",
+                                "align": "start",
+                                "size": "md",
+                                "gravity": "center",
+                                "weight": "bold"
+                            },
+                            {
+                                "type": "text",
+                                "text": "{}".format(all_status),
+                                "color": "#ffffff",
+                                "align": "start",
+                                "size": "xs",
+                                "gravity": "center",
+                                "margin": "lg"
+                            }
+                        ],
+                        "backgroundColor": "#9370DB",
+                        "paddingTop": "19px",
+                        "paddingAll": "12px",
+                        "paddingBottom": "16px"
+                    },
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "รายการแจ้งซ่อมทั้งหมด",
+                                        "color": "#8C8C8C",
+                                        "size": "sm",
+                                        "align": "center"
+                                    }
+                                ],
+                                "flex": 1
+                            }
+                        ],
+                        "spacing": "md",
+                        "paddingAll": "12px"
+                    },
+                    "styles": {
+                        "footer": {
+                        }
+                    }
+                },
+                
             ]
         }
     )
