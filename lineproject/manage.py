@@ -99,7 +99,7 @@ def handle_message(event):
                 for i in mycol.find({"user_id": userid}):
                     yourdata += ("\nไอดีแจ้งซ่อม: %s\nแจ้งซ่อม: %s\nรายละเอียดการแจ้งซ่อม: %s\nสถานที่: %s\nวันที่: %s\nสถานะ: %s\nหมายเหตุ: %s\n\n˚ ༘♡ ⋆｡˚ ❀˚ ༘♡ ⋆｡˚ ❀˚ ༘♡ ⋆｡˚ ❀\n" %
                                  (i['repair_id'], i['repair'], i['repair_type'], i['address'], i['timestamp'], i['status'], i['note']))
-                letter = "สถานะของคุณมีทั้งหมด %d รายการ\n\n｡☆✼★━━━━━━━━★✼☆｡\n" % n
+                letter = "แจ้งซ่อมของคุณมีทั้งหมด %d รายการ\n\n｡☆✼★━━━━━━━━★✼☆｡\n" % n
                 sendMessage(event, letter+yourdata)
             else:
                 sendMessage(event, "ไม่มีรายการแจ้งซ่อมของคุณ กรุณาแจ้งซ่อมก่อนค่ะ")
